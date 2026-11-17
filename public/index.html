@@ -311,9 +311,8 @@ function detail(id){
  app.innerHTML=`<div class="wrap"><a href="#/showroom" class="mut" style="display:inline-block;padding-top:24px">← Back to showroom</a>
  <div class="det"><div><div class="im" style="background-image:url('${img(v)}')"></div><div class="box" style="margin-top:20px"><h3>About this vehicle</h3><p class="mut" style="margin-top:8px">${e(v.description)||'No description has been added yet.'}</p></div>
  </div>
- <div><div class="box"><span class="chip ${v.available?'ok':'bad'}">${e(v.status)}</span><h1 class="dt" style="margin-top:10px">${e(v.name)}</h1><p class="mut">${e(v.category)}</p><div class="price" style="font-size:40px;margin:10px 0">${money(v.price)}</div>
+ <div><div class="box"><span class="chip ${v.available?'ok':'bad'}">${e(v.status)}</span><h1 class="dt" style="margin-top:10px">${e(v.name)}</h1><p class="mut">${e(v.category)}</p>
  <div class="spec"><div><span class="mut">Model</span><b>${e(v.category)}</b></div><div><span class="mut">Upgrade</span><b>${v.upgrade?'Upgraded':'Non-upgraded'}</b></div><div><span class="mut">Number plate</span><b>${e(v.plate_no)||'Not listed'}</b></div><div><span class="mut">Old owner (seller)</span><b>${e(v.seller)||'Not listed'}</b></div></div>
- <span class="mut">Price vs showroom highest</span><div class="bar"><i data-w="${v.price/mxP*100}"></i></div>
  <a class="btn" style="display:block;text-align:center${v.available?'':';pointer-events:none;opacity:.4'}" href="#/book/${v.id}">Pre-book this vehicle</a>
  <div style="display:flex;gap:10px;margin-top:10px"><button class="btn g" style="flex:1" id="dw">${wish.includes(v.id)?'Saved ♥':'Save ♥'}</button><button class="btn g" style="flex:1" id="dc">${cmp.includes(v.id)?'In compare':'Add to compare'}</button></div>
  <button class="btn g" style="width:100%;margin-top:10px" id="sh">Copy link to share</button></div></div></div>
@@ -328,7 +327,7 @@ function compareView(){
  const l=cmp.map(i=>V.find(v=>v.id===i)).filter(Boolean);
  app.innerHTML=`<section class="wrap"><div class="head"><h2>Compare vehicles</h2>${l.length?'<button class="btn g s" id="cl">Clear all</button>':''}</div>`+(l.length<2?`<p class="mut">Add at least two vehicles using the VS button on any card.</p><a class="btn" style="margin-top:16px" href="#/showroom">Choose vehicles</a>`:
  `<div class="tw box"><table class="cmp"><tr><th></th>${l.map(v=>`<th><a href="#/v/${v.id}"><h3 style="color:#fff">${e(v.name)}</h3></a></th>`).join('')}</tr>
- ${[['Model',v=>e(v.category)],['Plate',v=>e(v.plate_no)||'-'],['Upgrade',v=>v.upgrade?'Upgraded':'Non-upgraded'],['Old owner',v=>e(v.seller)||'-'],['Price',v=>money(v.price)],['Status',v=>e(v.status)]].map(([k,f])=>`<tr><th>${k}</th>${l.map(v=>`<td>${f(v)}</td>`).join('')}</tr>`).join('')}
+ ${[['Model',v=>e(v.category)],['Plate',v=>e(v.plate_no)||'-'],['Upgrade',v=>v.upgrade?'Upgraded':'Non-upgraded'],['Old owner',v=>e(v.seller)||'-'],['Status',v=>e(v.status)]].map(([k,f])=>`<tr><th>${k}</th>${l.map(v=>`<td>${f(v)}</td>`).join('')}</tr>`).join('')}
  <tr><th></th>${l.map(v=>`<td><a class="btn s" href="#/book/${v.id}">Pre-book</a></td>`).join('')}</tr></table></div>`)+'</section>';
  $('#cl')&&($('#cl').onclick=()=>{cmp=[];store.set('tx_c',cmp);compareView();badge()})}
 
