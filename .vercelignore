@@ -1,0 +1,7 @@
+uploads
+Makefile
+start.sh
+start.bat
+*.sql
+README.md
+DEPLOY.md

@@ -1,4 +1,4 @@
-import os, secrets, uuid, functools, click, requests, mysql.connector
+import os, secrets, uuid, functools, hashlib, time, click, requests, certifi, mysql.connector
 from urllib.parse import urlencode
 from flask import Flask, request, jsonify, session, send_from_directory, redirect, g
 from werkzeug.utils import secure_filename
@@ -13,11 +13,13 @@ def _load_env():
                 k, v = line.split("=", 1); os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
 _load_env()
 
-app = Flask(__name__, static_folder="static", static_url_path="")
+BASE = os.path.dirname(os.path.abspath(__file__))
+app = Flask(__name__, static_folder=os.path.join(BASE, "public"), static_url_path="")
 app.secret_key = os.environ.get("SECRET_KEY", "change-me-in-production")
-app.config.update(MAX_CONTENT_LENGTH=5*1024*1024, SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Lax")
+app.config.update(MAX_CONTENT_LENGTH=4*1024*1024, SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Lax")
 UP = os.path.join(os.path.dirname(__file__), "uploads")
-os.makedirs(UP, exist_ok=True)
+try: os.makedirs(UP, exist_ok=True)
+except OSError: pass   # read-only filesystem (Vercel) - images go to Cloudinary instead
 
 CATS = ["Sedan", "SUV", "Bike", "Sports", "Supercar", "Luxury", "Other"]   # model types
 STATUSES = ["Pending", "Approved", "Rejected", "Completed"]
@@ -33,8 +35,12 @@ DISCORD_API = "https://discord.com/api"
 
 
 def db():
-    return mysql.connector.connect(host=os.environ.get("DB_HOST", "localhost"), user=os.environ.get("DB_USER", "root"),
-        password=os.environ.get("DB_PASS", ""), database=os.environ.get("DB_NAME", "showroom"))
+    cfg = dict(host=os.environ.get("DB_HOST", "localhost"), port=int(os.environ.get("DB_PORT", "3306")),
+               user=os.environ.get("DB_USER", "root"), password=os.environ.get("DB_PASS", ""),
+               database=os.environ.get("DB_NAME", "showroom"), connection_timeout=10)
+    if os.environ.get("DB_SSL", "0") == "1":      # required by TiDB Cloud / Aiven / most online MySQL hosts
+        cfg.update(ssl_disabled=False, ssl_ca=certifi.where(), ssl_verify_cert=os.environ.get("DB_SSL_VERIFY", "1") != "0")
+    return mysql.connector.connect(**cfg)
 
 def q(sql, args=(), one=False, write=False):
     c = db(); cur = c.cursor(dictionary=True)
@@ -142,16 +148,31 @@ def clean_vehicle(d):
     if v["purchase_price"] < 0 or v["price"] < 0: return None, "Amounts cannot be negative."
     return v, None
 
+def cloudinary_upload(f, ext):
+    """Signed upload to Cloudinary using CLOUDINARY_URL=cloudinary://API_KEY:API_SECRET@CLOUD_NAME. Returns the https URL."""
+    from urllib.parse import urlparse
+    u = urlparse(os.environ["CLOUDINARY_URL"])
+    key, secret, cloud = u.username, u.password, u.hostname
+    params = dict(folder="topx-showroom", timestamp=str(int(time.time())))
+    sig = hashlib.sha1(("&".join(f"{k}={params[k]}" for k in sorted(params)) + secret).encode()).hexdigest()
+    r = requests.post(f"https://api.cloudinary.com/v1_1/{cloud}/image/upload", timeout=30,
+                      data=dict(params, api_key=key, signature=sig), files={"file": (uuid.uuid4().hex + "." + ext, f.stream, f.mimetype)})
+    if r.status_code != 200: raise ValueError("Image upload failed: " + r.text[:150])
+    return r.json()["secure_url"].replace("/upload/", "/upload/w_1400,q_auto,f_auto/", 1)
+
 def save_image(vals):
     f = request.files.get("image")
     if not f or not f.filename: return
     ext = secure_filename(f.filename).rsplit(".", 1)[-1].lower()
     if ext not in EXT: raise ValueError("Image must be png, jpg, webp or gif.")
-    name = uuid.uuid4().hex + "." + ext
-    f.save(os.path.join(UP, name)); vals["image"] = name
+    if os.environ.get("CLOUDINARY_URL"):
+        vals["image"] = cloudinary_upload(f, ext)          # full https URL (online hosting)
+    else:
+        name = uuid.uuid4().hex + "." + ext                # local disk (running on your own PC)
+        f.save(os.path.join(UP, name)); vals["image"] = name
 
 @app.route("/")
-def index(): return app.send_static_file("index.html")
+def index(): return send_from_directory(os.path.join(BASE, "public"), "index.html")
 @app.route("/admin")
 def admin_page(): return redirect("/#/admin")
 
