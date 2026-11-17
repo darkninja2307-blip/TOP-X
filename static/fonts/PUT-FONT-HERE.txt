@@ -1,4 +1,0 @@
-Put your "Go Eagles!" font file in this folder and name it one of:
-  GoEagles.ttf   (or GoEagles.otf / GoEagles.woff2)
-Then press Ctrl+F5 in the browser.
-Until the file is here, the site falls back to Saira Condensed (no italic).
