@@ -77,7 +77,31 @@ nav.out a.l,nav.out .pill{display:none}
 .login{min-height:70vh;display:grid;place-items:center;text-align:center}.login .box{max-width:480px;padding:40px}
 @media(max-width:800px){.dgrid{grid-template-columns:1fr!important}.det,.steps{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr}.stats div:nth-child(2){border:0}nav a.l.x{display:none}.cta{padding:30px}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}.hero video{display:none}}
+
+/* ---- loading effects ---- */
+#boot{position:fixed;inset:0;z-index:200;background:var(--ink);display:grid;place-content:center;justify-items:center;gap:22px;transition:opacity .45s,visibility .45s}
+#boot.off{opacity:0;visibility:hidden}
+#boot img{height:84px;animation:pulse 1.3s ease-in-out infinite}
+#boot .bl{width:150px;height:3px;background:var(--line);border-radius:3px;overflow:hidden;position:relative}
+#boot .bl:after{content:"";position:absolute;top:0;bottom:0;width:40%;background:var(--blue);border-radius:3px;animation:slide 1s ease-in-out infinite}
+#bar{position:fixed;top:0;left:0;width:100%;height:3px;z-index:150;pointer-events:none;opacity:0;transition:opacity .25s;background:linear-gradient(90deg,transparent,var(--blue),var(--deep),transparent) -50% 0/50% 100% no-repeat;animation:bar 1s linear infinite}
+#bar.on{opacity:1}
+.sk{background:linear-gradient(100deg,var(--panel) 30%,var(--panel2) 50%,var(--panel) 70%) 0 0/300% 100%;animation:sh 1.3s linear infinite;border-radius:14px}
+.sk-t{height:44px;width:min(320px,70%);margin-bottom:24px}.sk-c{aspect-ratio:4/3}
+.skg{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:20px}
+.btn.busy{pointer-events:none;opacity:.8;color:transparent!important;position:relative}
+.btn.busy:after{content:"";position:absolute;left:50%;top:50%;width:16px;height:16px;margin:-8px 0 0 -8px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite}
+.card{animation:up .45s ease backwards}
+@keyframes pulse{50%{opacity:.55;transform:scale(.94)}}
+@keyframes slide{0%{left:-40%}100%{left:100%}}
+@keyframes bar{to{background-position:150% 0}}
+@keyframes sh{to{background-position:-200% 0}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes up{from{opacity:0;transform:translateY(14px)}}
+@media(prefers-reduced-motion:reduce){.card{animation:none}}
 </style></head><body>
+<div id="boot"><img src="/logo.png" alt=""><div class="bl"></div></div><div id="bar"></div>
+<script>setTimeout(function(){var b=document.getElementById('boot');b&&b.classList.add('off')},12000)</script>
 <img id="cc" src="/car-cursor.png" alt="">
 <nav><a class="logo" href="#/"><img src="/logo.png" alt="">TOP-X</a>
 <a class="l" href="#/" data-r="">Home</a><a class="l" href="#/showroom" data-r="showroom">Showroom</a><a class="l x" href="#/compare" data-r="compare">Compare<span class="cnt" id="nc" hidden></span></a><a class="l x" href="#/track" data-r="track">Track booking</a><a class="pill" href="#/book">Pre-book</a><span class="nu" id="nu"></span></nav>
@@ -86,6 +110,8 @@ nav.out a.l,nav.out .pill{display:none}
 <div id="toasts"></div><dialog id="dlg"></dialog>
 <script>
 const $=s=>document.querySelector(s),app=$('#app'),CATS=['Sedan','SUV','Bike','Sports','Supercar','Luxury','Other'],ST=['Pending','Approved','Rejected','Completed'];
+const bootDone=()=>$('#boot')?.classList.add('off');let _n=0;const bar=on=>{_n=Math.max(0,_n+(on?1:-1));$('#bar').classList.toggle('on',_n>0)};
+const skel=()=>{app.innerHTML=`<section class="wrap" style="padding-top:110px"><div class="sk sk-t"></div><div class="skg">${'<div class="sk sk-c"></div>'.repeat(6)}</div></section>`};
 const DISCORD=''; /* paste your Discord invite link here */
 const e=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money=n=>'$'+Number(n).toLocaleString('en-US'),img=v=>v.image?(/^https?:/.test(v.image)?e(v.image):'/uploads/'+e(v.image)):'/hero-car.jpg';
@@ -93,7 +119,7 @@ const store={get(k){try{return JSON.parse(localStorage.getItem(k))||[]}catch{ret
 let ME=null,V=[],wish=store.get('tx_w'),cmp=store.get('tx_c');
 function toast(m,err){const t=document.createElement('div');t.className='toast'+(err?' e':'');t.textContent=m;$('#toasts').append(t);setTimeout(()=>t.remove(),3200)}
 async function api(u,o={}){if(o.body&&!(o.body instanceof FormData)){o.headers={'Content-Type':'application/json'};o.body=JSON.stringify(o.body)}
-const r=await fetch(u,o),d=await r.json().catch(()=>({}));if(!r.ok)throw Object.assign(new Error(d.error||'Request failed'),{code:r.status});return d}
+bar(1);try{const r=await fetch(u,o),d=await r.json().catch(()=>({}));if(!r.ok)throw Object.assign(new Error(d.error||'Request failed'),{code:r.status});return d}finally{bar(0)}}
 const load=async()=>V=await api('/api/vehicles');
 const cc=$('#cc');addEventListener('mousemove',ev=>{cc.classList.add('show');if(cc.naturalWidth)document.documentElement.classList.add('hc');cc.style.left=ev.clientX+'px';cc.style.top=ev.clientY+'px'});
 function badge(){const n=$('#nc');n.hidden=!cmp.length;n.textContent=cmp.length}
@@ -113,9 +139,9 @@ function loginView(cfg){
  <p class="mut" style="margin:12px 0 24px">Log in with your Discord account to browse the showroom and reserve a vehicle.</p>
  ${err?`<p style="color:var(--bad);margin-bottom:16px">${e(err)}</p>`:''}
  ${cfg===false?'<p style="color:var(--warn);margin-bottom:16px">Server setup: set DISCORD_CLIENT_ID and DISCORD_CLIENT_SECRET first.</p>':''}
- <a class="dsc" href="/auth/discord">Login with Discord</a></div></section>`}
+ <a class="dsc" href="/auth/discord">Login with Discord</a></div></section>`;const d=app.querySelector('.dsc');d&&(d.onclick=()=>{d.textContent='Opening Discord…';d.style.opacity='.7'})}
 async function route(){
- const p=(location.hash||'#/').split('/'),r=p[1]||'';scrollTo(0,0);
+ const p=(location.hash||'#/').split('/'),r=p[1]||'';scrollTo(0,0);if(!app.children.length)skel();
  try{
   const m=await api('/api/me');ME=m.user;paintNav();
   if(!ME)return loginView(m.discord_configured);
@@ -124,7 +150,7 @@ async function route(){
   await load();
   ({'':home,showroom:()=>showroom(),v:()=>detail(+p[2]),compare:compareView,book:()=>bookView(+p[2]||0),track:()=>trackView(p[2])})[r]?.();
   if(!['','showroom','v','compare','book','track'].includes(r))home();
- }catch(x){if(x.code===401){ME=null;paintNav();return loginView(true)}app.innerHTML=`<section class="wrap"><h2>Server unreachable</h2><p class="mut" style="margin-top:10px">${e(x.message)}. Make sure the Flask app and MySQL are running, then reload.</p></section>`}
+ }catch(x){if(x.code===401){ME=null;paintNav();return loginView(true)}app.innerHTML=`<section class="wrap"><h2>Server unreachable</h2><p class="mut" style="margin-top:10px">${e(x.message)}. Make sure the Flask app and MySQL are running, then reload.</p></section>`}finally{bootDone()}
 }
 addEventListener('hashchange',route);
 
@@ -235,7 +261,7 @@ async function adminView(){
  if(!ME.is_admin){app.innerHTML=`<section class="wrap"><div class="box" style="max-width:560px"><h2>Staff only</h2><p class="mut" style="margin-top:10px">Your Discord account (<b>${e(ME.username)}</b>) is not an admin. Ask the owner to run:</p><p class="box" style="margin-top:12px;font-family:monospace">flask make-admin ${e(ME.discord_id)}</p></div></section>`;return}
  app.innerHTML=`<section class="wrap"><div class="tabs"><button class="btn g s" data-t="dash">Dashboard</button><button class="btn g s" data-t="veh">Vehicles</button><button class="btn g s" data-t="sales">Sales log</button><button class="btn g s" data-t="bk">Bookings</button></div><div id="at"></div></section>`;
  const T={dash,veh,sales,bk};document.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>T[b.dataset.t]());dash()}
-const guard=f=>async(...a)=>{try{return await f(...a)}catch(x){x.code===401?route():toast(x.message,1)}};
+const guard=f=>async(...a)=>{const ev=a[0],b=ev&&ev.submitter||(ev&&ev.currentTarget&&ev.currentTarget.classList&&ev.currentTarget.classList.contains('btn')?ev.currentTarget:null);b&&b.classList.add('busy');try{return await f(...a)}catch(x){x.code===401?route():toast(x.message,1)}finally{b&&b.classList.remove('busy')}};
 const dash=guard(async()=>{const s=await api('/api/admin/stats'),L=await api('/api/admin/sales'),rev=L.reduce((a,x)=>a+x.sold_amount,0),pro=L.reduce((a,x)=>a+x.sold_amount-x.purchase_price,0),mx=Math.max(...s.popular.map(p=>p.n),1);
  $('#at').innerHTML=`<div class="kp">${[['Vehicles',s.vehicles],['In stock',s.in_stock],['Cars sold',s.sold],['Pending bookings',s.pending],['Discord users',s.users],['Sales revenue',money(rev)],['Profit',money(pro)]].map(([l,n],i)=>`<div class="box${i>4?' wide':''}"><span class="mut">${l}</span><b title="${n}">${n}</b></div>`).join('')}</div>
  <div class="steps dgrid"><div class="box"><h3>Most booked</h3>${s.popular.map(p=>`<div style="margin-top:12px">${e(p.name)} <span class="mut">${p.n}</span><div class="bar"><i data-w="${p.n/mx*100}"></i></div></div>`).join('')||'<p class="mut">No bookings yet.</p>'}</div>
