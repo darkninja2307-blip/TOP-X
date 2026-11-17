@@ -336,7 +336,7 @@ function compareView(){
 function bookView(pre){
  const av=V.filter(v=>v.available);
  app.innerHTML=`<section class="wrap"><div class="head"><h2>Reserve your vehicle</h2><p>Staff will review your request and contact you on Discord.</p></div>
- <form class="f box" id="bf"><label>Vehicle<select name="vehicle_id" required><option value="">Choose a vehicle</option>${av.map(v=>`<option value="${v.id}" ${v.id===pre?'selected':''}>${e(v.name)} · ${money(v.price)}</option>`).join('')}</select></label>
+ <form class="f box" id="bf"><label>Vehicle<select name="vehicle_id" required><option value="">Choose a vehicle</option>${av.map(v=>`<option value="${v.id}" ${v.id===pre?'selected':''}>${e(v.name)}</option>`).join('')}</select></label>
  <label>Player name<input name="player_name" required minlength="2" maxlength="60" autocomplete="name"></label>
  <label>In-game number<input name="player_id" required inputmode="numeric" pattern="\\d{1,10}" title="Numbers only, up to 10 digits"></label>
  <label>Discord account<input value="${e(ME.username)}" disabled></label>
